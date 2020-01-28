@@ -72,40 +72,89 @@ class CouponRecord(models.Model):
     status_choices = ((0, '未使用'), (1, '已使用'), (2, '已过期'))
     status = models.SmallIntegerField(choices=status_choices, default=0)
     get_time = models.DateTimeField(verbose_name="领取时间", help_text="用户领取时间")
-    used_time = models.DateTimeField(blank=True, null=True, verbose_name="使用时间")
-    order = models.ForeignKey("Order", blank=True, null=True, verbose_name="关联订单", on_delete=None)
+    used_time = models.DateTimeField(verbose_name="使用时间", blank=True, null=True)
+    # 一个订单可以有多张优惠券，因此是一对多关系
+    order = models.ForeignKey("Order", verbose_name="关联订单", blank=True, null=True, on_delete=None)
 
     class Meta:
         verbose_name_plural = "14. 用户优惠券领取使用记录表"
         db_table = verbose_name_plural
         verbose_name = verbose_name_plural
 
-    
-
-
-
-
-
-
-
-
-
-
+    def __str__(self):
+        return '%s-%s-%s' % (self.account, self.number, self.status)
 
 
 class Order(models.Model):
-    pass
+    """订单"""
+    payment_type_choices = (
+        (0, '微信'), (1, '支付宝'), (2, '优惠码'), (3, '贝里')
+    )
+    payment_type = models.SmallIntegerField(choices=payment_type_choices)
+    payment_number = models.CharField(max_length=128, verbose_name="支付第三方订单号", null=True, blank=True)
+    # 考虑到订单合并支付的问题
+    order_number = models.CharField(max_length=128, verbose_name="订单号", unique=True)
+    account = models.ForeignKey(to=Account, on_delete=None)
+    actual_amount = models.FloatField(verbose_name="实付金额")
+    # 注意只要创建了订单，订单即存在，与完成付款无关
+    status_choices = (
+        (0, '交易成功'), (1, '待支付'), (2, '退费申请中'), (3, '已退费'), (4, '主动取消'), (5, '超时取消')
+    )
+    status = models.SmallIntegerField(choices=status_choices, verbose_name="状态")
+    date = models.DateTimeField(auto_now_add=True, verbose_name="订单生成时间")
+    pay_time = models.DateTimeField(blank=True, null=True, verbose_name="付款时间")
+    cancel_time = models.DateTimeField(blank=True, null=True, verbose_name="订单取消时间")
 
+    class Meta:
+        verbose_name_plural = "15. 订单表"
+        db_table = verbose_name_plural
+        verbose_name = verbose_name_plural
 
+    def __str__(self):
+        return "%s" % self.order_number
 
 
 class OrderDetail(models.Model):
-    pass
+    """订单详情"""
+    order = models.ForeignKey("Order", on_delete=None)     # 关联订单，一个订单可能有多个订单详情
 
+    content_type = models.ForeignKey(ContentType, on_delete=None)   # 关联普通课程或学位
+    object_id = models.PositiveIntegerField()
+    content_object = GenericForeignKey('content_type', 'object_id')
 
+    original_price = models.FloatField("课程原价")
+    price = models.FloatField("折后价格")
+    valid_period_display = models.CharField("有效期显示", max_length=32)    # 订单页显示
+    valid_period = models.PositiveIntegerField("有效期(days)")       # 课程有效期
+    memo = models.CharField(verbose_name="备忘录", max_length=255, blank=True, null=True)
+
+    class Meta:
+        verbose_name_plural = "16. 订单详细"
+        db_table = verbose_name_plural
+        verbose_name = verbose_name_plural
+
+    def __str__(self):
+        return "%s - %s -%s" % (self.order, self.content_type, self.price)
 
 
 class TransactionRecord(models.Model):
-    pass
+    """贝里交易记录"""
+    account = models.ForeignKey(to=Account, on_delete=None)
+    amount = models.IntegerField("金额")
+    balance = models.IntegerField("账户余额")
+    # 交易类型
+    transaction_type_choices = (
+        (0, '收入'), (1, '支出'), (2, '退款'), (3, '提现')
+    )
+    transaction_type = models.SmallIntegerField(choices=transaction_type_choices)
+    transaction_number = models.CharField(verbose_name="流水号", unique=True, max_length=128)
+    date = models.DateTimeField(auto_now_add=True)      # 创建交易记录时间
+    memo = models.CharField(verbose_name="备忘录", max_length=128, blank=True, null=True)
 
+    class Meta:
+        verbose_name_plural = "17. 贝里交易记录"
+        db_table = verbose_name_plural
+        verbose_name = verbose_name_plural
 
+    def __str__(self):
+        return "%s" % self.transaction_number

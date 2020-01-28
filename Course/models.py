@@ -1,7 +1,4 @@
 from django.db import models
-# Create your models here.
-
-from django.db import models
 from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
 from django.contrib.contenttypes.models import ContentType
 
@@ -45,9 +42,9 @@ class Course(models.Model):
     # 学习人数保存在这里，提升展示效率，降低主站访问压力，减少访问数据库
     study_num = models.IntegerField(verbose_name="学习人数", help_text="只要有人买课程，订单表加入数据的同时给这个字段+1")
 
-    # order_details = GenericRelation("OrderDetail", related_query_name="course")
-    # coupon = GenericRelation("Coupon")
     # GenericRelation只用于反向查询不生成字段
+    # order_details = GenericRelation("OrderDetail", related_query_name="course")    # 订单详情
+    # coupon = GenericRelation("Coupon")           # 优惠券
     price_policy = GenericRelation("PricePolicy")     # 价格策略
     often_ask_questions = GenericRelation("OftenAskedQuestion")    # 常见问题
     course_comments = GenericRelation("Comment")      # 评论
@@ -227,6 +224,7 @@ class Account(models.Model):
     pwd = models.CharField(max_length=32, verbose_name="密文密码")
     # head_img = models.CharField(max_length=256, default='/static/frontend/head_portrait/logo@2x.png',
     #                             verbose_name="个人头像")
+    # balance = models.IntegerField(verbose_name="贝里余额")
 
     def __str__(self):
         return self.username
